@@ -1,0 +1,19 @@
+{
+  "name": "cc",
+  "interface": {
+    "displayName": "CC"
+  },
+  "plugins": [
+    {
+      "name": "cc",
+      "source": {
+        "source": "local",
+        "path": "./plugins/cc"
+      },
+      "policy": {
+        "installation": "AVAILABLE"
+      },
+      "category": "Engineering"
+    }
+  ]
+}

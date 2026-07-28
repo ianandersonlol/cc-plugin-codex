@@ -1,0 +1,28 @@
+{
+  "name": "cc",
+  "version": "0.1.0",
+  "description": "Delegate code review and implementation work to Claude Code from inside Codex.\n\nUse cc when you want an independent second opinion on a diff, an adversarial pass over a risky change before merge, or to hand a substantial task to another agent. Reviews run read-only against the real repository.",
+  "author": {
+    "name": "Ian Anderson"
+  },
+  "homepage": "https://github.com/ianandersonlol/cc-plugin-codex",
+  "repository": "https://github.com/ianandersonlol/cc-plugin-codex",
+  "license": "MIT",
+  "keywords": [
+    "review",
+    "adversarial-review",
+    "delegation",
+    "second-opinion"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "CC",
+    "shortDescription": "A second engineering voice, on demand",
+    "longDescription": "cc delegates reviews and implementation work to Claude Code. Reviews run read-only with access to the whole repository, so findings are verified against real call sites rather than guessed from a diff.",
+    "developerName": "Ian Anderson",
+    "category": "Engineering",
+    "capabilities": [
+      "Read"
+    ]
+  }
+}

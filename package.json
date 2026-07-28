@@ -1,0 +1,19 @@
+{
+  "name": "cc-plugin-codex",
+  "version": "0.1.0",
+  "description": "Delegate code review and implementation work to Claude Code from inside Codex.",
+  "license": "MIT",
+  "author": "Ian Anderson",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ianandersonlol/cc-plugin-codex.git"
+  },
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=18.18"
+  },
+  "scripts": {
+    "test": "node --test tests/"
+  }
+}
