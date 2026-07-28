@@ -64,7 +64,7 @@ test("a review renders verdict, summary, findings, and next steps", () => {
       durationMs: 42000,
       costUsd: 1.234
     },
-    { title: "Adversarial review", target: "working tree", model: "opus" }
+    { title: "Adversarial review", target: "working tree", model: "opus", effort: "xhigh" }
   );
 
   assert.match(output, /Adversarial review — NEEDS ATTENTION/);
@@ -74,7 +74,7 @@ test("a review renders verdict, summary, findings, and next steps", () => {
   assert.match(output, /src\/math\.js:10-12 \(confidence 80%\)/);
   assert.match(output, /Recommendation: Guard against zero\./);
   assert.match(output, /- Add a regression test/);
-  assert.match(output, /opus · 4 turns · 42\.0s · \$1\.234/);
+  assert.match(output, /opus · xhigh effort · 4 turns · 42\.0s · \$1\.234/);
 });
 
 test("an approving review says so instead of listing nothing", () => {
@@ -110,4 +110,5 @@ test("rate limiting and error status are surfaced", () => {
 test("the run footer omits fields that are absent", () => {
   assert.equal(renderRunFooter({}), "");
   assert.equal(renderRunFooter({ model: "sonnet" }), "— sonnet");
+  assert.equal(renderRunFooter({ model: "fable", effort: "max" }), "— fable · max effort");
 });

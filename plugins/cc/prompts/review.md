@@ -30,6 +30,9 @@ Weight the user's focus area heavily if one was supplied.
 Report only material findings.
 Skip style, naming, formatting, and speculative concerns without evidence.
 A finding should say what breaks, under what conditions, and what to change.
+Classify each finding by priority: `high` for merge-blocking defects with substantial impact,
+`medium` for real defects with narrower impact, and `low` for small but actionable risks.
+Reserve `critical` for catastrophic security, data-loss, or availability failures.
 </finding_bar>
 
 <structured_output_contract>

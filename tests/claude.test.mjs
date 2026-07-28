@@ -2,12 +2,15 @@ import assert from "node:assert/strict";
 import path from "node:path";
 import test from "node:test";
 import {
+  DEFAULT_REVIEW_MODEL,
   READ_ONLY_TOOLS,
   WRITE_DENIED_TOOLS,
   buildReviewArgs,
   parseClaudeResult,
   quoteForCmd,
   resolveClaudeBinary,
+  resolveReviewEffort,
+  resolveReviewModel,
   runClaude,
   subscriptionEnv
 } from "../plugins/cc/scripts/lib/claude.mjs";
@@ -39,13 +42,53 @@ const RESULT_ENVELOPE = JSON.stringify([
 ]);
 
 test("review args never carry the prompt", () => {
-  const args = buildReviewArgs({ model: "sonnet", schema: '{"type":"object"}' });
+  const args = buildReviewArgs({
+    model: "fable",
+    effort: "max",
+    schema: '{"type":"object"}'
+  });
   assert.equal(args.includes("-p"), true);
   assert.equal(
     args.some((arg) => arg.length > 200),
     false,
     "no argv entry should look like a prompt body"
   );
+});
+
+test("review args pass model and effort through to Claude Code", () => {
+  const args = buildReviewArgs({ model: "fable", effort: "medium" });
+  assert.deepEqual(args.slice(args.indexOf("--model"), args.indexOf("--model") + 2), [
+    "--model",
+    "fable"
+  ]);
+  assert.deepEqual(args.slice(args.indexOf("--effort"), args.indexOf("--effort") + 2), [
+    "--effort",
+    "medium"
+  ]);
+});
+
+test("reviews default to Opus and resolve the Fable alias", () => {
+  assert.equal(DEFAULT_REVIEW_MODEL, "opus");
+  assert.equal(resolveReviewModel(), "opus");
+  assert.equal(resolveReviewModel("fable"), "claude-fable-5");
+  assert.equal(resolveReviewModel("FABLE"), "claude-fable-5");
+  assert.equal(resolveReviewModel("claude-fable-5"), "claude-fable-5");
+  assert.equal(resolveReviewModel("future-model"), "future-model");
+});
+
+test("effort defaults follow the selected model family", () => {
+  assert.equal(resolveReviewEffort("fable"), "max");
+  assert.equal(resolveReviewEffort("claude-fable-5"), "max");
+  assert.equal(resolveReviewEffort("opus"), "xhigh");
+  assert.equal(resolveReviewEffort("claude-opus-4-6"), "xhigh");
+  assert.equal(resolveReviewEffort("sonnet"), "high");
+  assert.equal(resolveReviewEffort("haiku"), undefined);
+  assert.equal(resolveReviewEffort("future-model"), undefined);
+});
+
+test("an explicit valid effort wins and invalid efforts fail clearly", () => {
+  assert.equal(resolveReviewEffort("fable", "LOW"), "low");
+  assert.throws(() => resolveReviewEffort("opus", "minimal"), /Unsupported effort/);
 });
 
 test("review args never pass --bare, which would break subscription auth", () => {

@@ -69,6 +69,9 @@ export function renderRunFooter(run = {}) {
   if (run.model) {
     parts.push(run.model);
   }
+  if (run.effort) {
+    parts.push(`${run.effort} effort`);
+  }
   if (typeof run.numTurns === "number") {
     parts.push(`${run.numTurns} turns`);
   }
@@ -125,7 +128,7 @@ export function renderReview(result, context = {}) {
     lines.push("", warnings);
   }
 
-  const footer = renderRunFooter({ ...result, model: context.model });
+  const footer = renderRunFooter({ ...result, model: context.model, effort: context.effort });
   if (footer) {
     lines.push("", footer);
   }

@@ -69,6 +69,7 @@ Chosen over the Agent SDK and over an MCP wrapper for one decisive reason:
 claude -p "$PROMPT" \
   --safe-mode \
   --model "$MODEL" \
+  --effort "$EFFORT" \
   --json-schema "$PLUGIN_ROOT/schemas/review-output.schema.json" \
   --output-format json \
   --allowedTools "Read,Grep,Glob,Bash(git diff:*),Bash(git log:*),Bash(git show:*),Bash(git status:*)" \
@@ -250,11 +251,12 @@ absent.
 3. **Sandbox and network.** Codex sandboxes tool calls; `claude -p` needs
    network. On a default `workspace-write` policy this fails. `/cc:setup` must
    detect it and say so plainly.
-4. **Model default.** Sonnet for routine review, `--model opus` behind an
-   explicit flag for adversarial passes on risky diffs — mirroring the forward
-   plugin's escalation discipline. A trivial 3-turn Sonnet run reported
-   `total_cost_usd: 0.209`, so an Opus pass over a real diff is not free of
-   rate-limit consequences even on a subscription.
+4. **Model and effort defaults.** *Resolved.* Reviews default to Opus with
+   `xhigh` effort. Fable is supported and defaults to `max`; Sonnet defaults to
+   `high`; Haiku and unknown/future model names leave effort to Claude Code.
+   `--model` and `--effort` remain explicit overrides. Finding priority is a
+   separate output concern: the schema requires critical/high/medium/low
+   severity, and the renderer sorts findings in that order.
 
 ## Build order
 

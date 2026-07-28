@@ -36,6 +36,43 @@ export const READ_ONLY_TOOLS = [
 
 export const WRITE_DENIED_TOOLS = ["Edit", "Write", "NotebookEdit"];
 
+export const DEFAULT_REVIEW_MODEL = "opus";
+export const VALID_EFFORTS = ["low", "medium", "high", "xhigh", "max"];
+
+/** Resolve user-friendly model aliases while preserving full and future model names. */
+export function resolveReviewModel(requestedModel) {
+  const model = String(requestedModel ?? "").trim() || DEFAULT_REVIEW_MODEL;
+  return model.toLowerCase() === "fable" ? "claude-fable-5" : model;
+}
+
+/**
+ * Pick a review effort while leaving unknown/future model names to the CLI.
+ * An explicit effort always wins over the model-family default.
+ */
+export function resolveReviewEffort(model, requestedEffort) {
+  if (requestedEffort !== undefined) {
+    const effort = String(requestedEffort).trim().toLowerCase();
+    if (!VALID_EFFORTS.includes(effort)) {
+      throw new Error(
+        `Unsupported effort "${requestedEffort}". Use one of: ${VALID_EFFORTS.join(", ")}.`
+      );
+    }
+    return effort;
+  }
+
+  const family = String(model ?? "").toLowerCase();
+  if (family.includes("fable")) {
+    return "max";
+  }
+  if (family.includes("opus")) {
+    return "xhigh";
+  }
+  if (family.includes("sonnet")) {
+    return "high";
+  }
+  return undefined;
+}
+
 /**
  * Locate the Claude Code CLI.
  *
@@ -113,6 +150,10 @@ export function buildReviewArgs(options = {}) {
 
   if (options.model) {
     args.push("--model", options.model);
+  }
+  if (options.effort) {
+    const effort = resolveReviewEffort(options.model, options.effort);
+    args.push("--effort", effort);
   }
   if (options.schema) {
     args.push("--json-schema", options.schema);

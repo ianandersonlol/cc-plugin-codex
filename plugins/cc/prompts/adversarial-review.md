@@ -52,6 +52,9 @@ A finding should answer:
 2. Why is this code path vulnerable?
 3. What is the likely impact?
 4. What concrete change would reduce the risk?
+Classify each finding by priority: `high` for merge-blocking defects with substantial impact,
+`medium` for real defects with narrower impact, and `low` for small but actionable risks.
+Reserve `critical` for catastrophic security, data-loss, or availability failures.
 </finding_bar>
 
 <structured_output_contract>

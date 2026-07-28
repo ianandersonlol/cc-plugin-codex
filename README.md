@@ -39,6 +39,26 @@ npm test    # no network or Claude Code install required
 | `$cc:cancel` | Planned | Stop a background run |
 | `$cc:transfer` | Planned | Hand the current Codex session's context to a fresh Claude Code session |
 
+## Models, effort, and finding priority
+
+Reviews use **Opus by default**. Fable is supported with `--model fable` (or
+`--model claude-fable-5`), and any model name accepted by the installed Claude
+Code CLI can be passed through.
+
+| Model family | Default effort |
+|---|---|
+| Fable | `max` |
+| Opus | `xhigh` |
+| Sonnet | `high` |
+| Haiku or an unknown model | Claude Code's default |
+
+Pass `--effort low|medium|high|xhigh|max` to override that selection. For
+example: `$cc:adversarial-review --model fable --effort high`.
+
+Effort controls how hard the reviewer reasons. Separately, every finding is
+assigned a **priority** (`critical`, `high`, `medium`, or `low`) and rendered in
+priority order, then by confidence within the same priority.
+
 ## Requirements
 
 - **Claude Code CLI** (`claude`) installed and logged in. A Claude subscription

@@ -2,8 +2,8 @@
 /**
  * cc companion runtime.
  *
- * Invoked by the /cc:* slash commands. Everything user-facing that a command
- * needs happens here, so the command bodies stay thin prompts rather than
+ * Invoked by the $cc:* skills. Everything user-facing that a skill needs
+ * happens here, so the skill bodies stay thin rather than duplicating
  * orchestration logic.
  */
 import fs from "node:fs";
@@ -12,10 +12,13 @@ import process from "node:process";
 
 import { parseArgs } from "./lib/args.mjs";
 import {
+  DEFAULT_REVIEW_MODEL,
   READ_ONLY_TOOLS,
   WRITE_DENIED_TOOLS,
   readSchema,
   resolveClaudeBinary,
+  resolveReviewEffort,
+  resolveReviewModel,
   runClaude
 } from "./lib/claude.mjs";
 import {
@@ -33,8 +36,6 @@ import { renderReview, renderSetupReport } from "./lib/render.mjs";
 const PLUGIN_ROOT = pluginRootFrom(import.meta.url, 1);
 const SCHEMA_PATH = path.join(PLUGIN_ROOT, "schemas", "review-output.schema.json");
 
-const DEFAULT_MODEL = "sonnet";
-
 function pluginVersion() {
   try {
     const manifest = path.join(PLUGIN_ROOT, ".codex-plugin", "plugin.json");
@@ -45,7 +46,12 @@ function pluginVersion() {
 }
 
 const REVIEW_SPEC = {
-  valueOptions: ["cwd", "base", "scope", "model"],
+  valueOptions: ["cwd", "base", "scope", "model", "effort"],
+  booleanOptions: ["json"]
+};
+
+const SETUP_SPEC = {
+  valueOptions: ["cwd"],
   booleanOptions: ["json"]
 };
 
@@ -62,7 +68,9 @@ function usage() {
     "  --cwd <path>         Repository directory (default: process cwd)",
     "  --base <ref>         Compare against this ref instead of the working tree",
     "  --scope <mode>       auto | working-tree | branch (default: auto)",
-    "  --model <name>       Claude model (default: sonnet)",
+    `  --model <name>       Claude model, including fable (default: ${DEFAULT_REVIEW_MODEL})`,
+    "  --effort <level>     low | medium | high | xhigh | max",
+    "                       defaults: fable=max, opus=xhigh, sonnet=high",
     "  --json               Emit raw JSON instead of rendered text"
   ].join("\n");
 }
@@ -117,7 +125,7 @@ function buildSetupReport(cwd) {
 }
 
 function handleSetup(argv) {
-  const { options } = parseArgs(argv, REVIEW_SPEC);
+  const { options } = parseArgs(argv, SETUP_SPEC);
   const report = buildSetupReport(resolveCwd(options));
   process.stdout.write(
     (options.json ? JSON.stringify(report, null, 2) : renderSetupReport(report)) + "\n"
@@ -143,7 +151,8 @@ function handleReview(argv, kind) {
 
   const promptName = kind === "adversarial" ? "adversarial-review" : "review";
   const title = kind === "adversarial" ? "Adversarial review" : "Review";
-  const model = options.model ?? DEFAULT_MODEL;
+  const model = resolveReviewModel(options.model);
+  const effort = resolveReviewEffort(model, options.effort);
 
   const prompt = buildReviewPrompt(PLUGIN_ROOT, promptName, {
     TARGET_LABEL: target.label,
@@ -154,6 +163,7 @@ function handleReview(argv, kind) {
   const result = runClaude(prompt, {
     cwd,
     model,
+    effort,
     schema: readSchema(SCHEMA_PATH),
     allowedTools: READ_ONLY_TOOLS,
     disallowedTools: WRITE_DENIED_TOOLS,
@@ -163,7 +173,7 @@ function handleReview(argv, kind) {
   if (options.json) {
     process.stdout.write(JSON.stringify(result, null, 2) + "\n");
   } else {
-    process.stdout.write(renderReview(result, { title, target: target.label, model }) + "\n");
+    process.stdout.write(renderReview(result, { title, target: target.label, model, effort }) + "\n");
   }
 
   return result.isError ? 1 : 0;

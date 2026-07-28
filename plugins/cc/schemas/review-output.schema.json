@@ -38,6 +38,7 @@
         "properties": {
           "severity": {
             "type": "string",
+            "description": "Finding priority, ordered from critical through high, medium, and low.",
             "enum": [
               "critical",
               "high",

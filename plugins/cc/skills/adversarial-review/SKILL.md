@@ -1,6 +1,6 @@
 ---
 name: adversarial-review
-description: 'Run a read-only, design-challenging Claude Code review of local git changes. Args: --cwd PATH, --base REF, --scope auto|working-tree|branch, --model NAME, --json, [focus text]. Use when the user explicitly wants stronger scrutiny, tradeoff challenges, or risk-focused review.'
+description: 'Run a read-only, design-challenging Claude Code review of local git changes. Args: --cwd PATH, --base REF, --scope auto|working-tree|branch, --model NAME, --effort low|medium|high|xhigh|max, --json, [focus text]. Defaults to Opus with xhigh effort. Use when the user explicitly wants stronger scrutiny, tradeoff challenges, or risk-focused review.'
 ---
 
 # CC Adversarial Review
@@ -11,6 +11,11 @@ Resolve `<node>` to `node` when it is on `PATH`. If it is absent and Codex expos
 
 Raw arguments:
 `$ARGUMENTS`
+
+The default model is Opus. Fable is supported with `--model fable` (or its full
+model identifier). Model-family effort defaults are Fable `max`, Opus `xhigh`,
+Sonnet `high`, and Haiku's CLI default; an explicit `--effort` overrides them.
+Findings are returned in priority order with critical/high/medium/low labels.
 
 Run:
 

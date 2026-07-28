@@ -3,7 +3,7 @@ import test from "node:test";
 import { parseArgs, tokenize } from "../plugins/cc/scripts/lib/args.mjs";
 
 const SPEC = {
-  valueOptions: ["cwd", "base", "scope", "model"],
+  valueOptions: ["cwd", "base", "scope", "model", "effort"],
   booleanOptions: ["json"]
 };
 
@@ -28,6 +28,7 @@ test("tokenize preserves an intentionally empty quoted argument", () => {
 test("value options accept both spaced and inline forms", () => {
   assert.equal(parseArgs("--base origin/main", SPEC).options.base, "origin/main");
   assert.equal(parseArgs("--base=origin/main", SPEC).options.base, "origin/main");
+  assert.equal(parseArgs("--effort=medium", SPEC).options.effort, "medium");
 });
 
 test("boolean options do not consume the next token", () => {
