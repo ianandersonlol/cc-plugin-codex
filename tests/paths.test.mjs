@@ -14,10 +14,11 @@ import {
 } from "../plugins/cc/scripts/lib/paths.mjs";
 
 test("pluginRootFrom resolves the plugin root from a lib module", () => {
-  const libModule = pathToFileURL(
-    path.join(path.sep, "repo", "plugins", "cc", "scripts", "lib", "paths.mjs")
-  ).href;
-  assert.equal(pluginRootFrom(libModule), path.join(path.sep, "repo", "plugins", "cc"));
+  // path.resolve, not path.join: a rooted-but-driveless path like \repo\x is
+  // relative to the current drive on Windows, and pathToFileURL resolves it.
+  const root = path.resolve(path.join(path.sep, "repo", "plugins", "cc"));
+  const libModule = pathToFileURL(path.join(root, "scripts", "lib", "paths.mjs")).href;
+  assert.equal(pluginRootFrom(libModule), root);
 });
 
 test("pluginRootFrom survives spaces in the path", () => {
