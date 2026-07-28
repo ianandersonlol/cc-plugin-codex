@@ -59,7 +59,8 @@ jobs:
         run: |
           set -euo pipefail
           pkg=$(node -p "require('./package.json').version")
-          plugin=$(node -p "require('./plugins/cc/.codex-plugin/plugin.json').version")
+          # Codex's local dev flow appends a +codex.<token> cachebuster; compare the prefix.
+          plugin=$(node -p "require('./plugins/cc/.codex-plugin/plugin.json').version.split('+')[0]")
           test "$pkg" = "$plugin" || {
             echo "version mismatch: package.json=$pkg plugin.json=$plugin" >&2
             exit 1

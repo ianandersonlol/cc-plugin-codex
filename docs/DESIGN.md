@@ -288,3 +288,38 @@ Two defects surfaced only in that run, neither reachable by unit tests:
 `--json-schema` takes the schema document inline rather than a path, and its
 validator rejects a `$schema` dialect it cannot resolve, so `readSchema`
 strips the declaration before the call.
+
+## Local development loop
+
+Codex caches installed plugins under `<codex-home>/plugins/cache/<marketplace>/<plugin>/<version>/`,
+keyed by version. Reinstalling without changing the version can serve a stale copy, and
+`codex plugin marketplace upgrade` only works on Git marketplaces — a local one errors with
+"not configured as a Git marketplace".
+
+Codex ships the flow for this in its own `plugin-creator` skill:
+
+```bash
+CREATOR=~/.codex/skills/.system/plugin-creator
+python3 $CREATOR/scripts/update_plugin_cachebuster.py <repo>/plugins/cc   # version -> 0.1.1+codex.<ts>
+python3 $CREATOR/scripts/validate_plugin.py           <repo>/plugins/cc
+codex plugin add cc@cc
+```
+
+The cachebuster is a semver build-metadata suffix, so CI compares only the part before `+`.
+Keep it out of commits; it exists to force a re-copy during iteration.
+
+**Plugins are read at session start.** After reinstalling, start a new Codex session — an
+already-running one keeps the previously loaded copy.
+
+### Validate against Codex's own rules
+
+`plugin-creator/scripts/validate_plugin.py` is the authoritative check. It caught a real defect
+here: `interface.defaultPrompt` is required, and this plugin's manifest lacked it.
+
+Also worth knowing: the official `plugin.json` spec has no `commands` key. `skills`, `hooks`, and
+`mcpServers` are declared paths "supplemented on top of default component discovery", and the
+scaffold offers `skills/`, `hooks/`, `scripts/`, `assets/`, `.mcp.json`, `.app.json` — but not
+`commands/`. Slash commands appear to arrive through default discovery rather than a manifest
+declaration, which is how Claude-format plugins like `agy` and `openai-codex` expose theirs. If
+command registration proves unreliable, the fallback is to expose the runtime through `.mcp.json`
+instead, which is a documented, first-class path.
