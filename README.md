@@ -8,11 +8,10 @@ Codex, and `cc` gives you a second engineering voice on demand.
 
 ## Status
 
-**Foundation laid; commands not yet wired.** The manifests, prompts, output
-schema, and the cross-platform process/path layer are in place, tested, and the
-plugin installs into Codex. The `cc-companion.mjs` entrypoint and the slash
-commands are the next piece of work. See [`docs/DESIGN.md`](docs/DESIGN.md) for
-the component map and the findings the design rests on.
+The review runtime and its first three Codex-native skills are wired and tested:
+`$cc:setup`, `$cc:review`, and `$cc:adversarial-review`. The remaining planned
+skills are not implemented yet. See [`docs/DESIGN.md`](docs/DESIGN.md) for the
+component map and the findings the design rests on.
 
 ## Platform support
 
@@ -24,21 +23,21 @@ for the rules — prompt on stdin, `shell: false` by default, resolve the
 executable rather than letting a shell find it, `CODEX_HOME` for state.
 
 ```bash
-npm test    # 36 tests, no network, no Claude Code install required
+npm test    # no network or Claude Code install required
 ```
 
-## Planned surface
+## Surface
 
-| Command | Purpose |
-|---|---|
-| `/cc:review` | Read-only review of the working tree or a branch |
-| `/cc:adversarial-review` | Challenge review — attacks the approach, not just defects |
-| `/cc:rescue` | Delegate a real task: diagnosis, a fix, an implementation pass |
-| `/cc:setup` | Check the local Claude Code install, auth, and sandbox/network access |
-| `/cc:status` | Progress of background runs |
-| `/cc:result` | Fetch a finished run |
-| `/cc:cancel` | Stop a background run |
-| `/cc:transfer` | Hand the current Codex session's context to a fresh Claude Code session |
+| Skill | Status | Purpose |
+|---|---|---|
+| `$cc:review` | Available | Read-only review of the working tree or a branch |
+| `$cc:adversarial-review` | Available | Challenge review — attacks the approach, not just defects |
+| `$cc:setup` | Available | Check the local Claude Code install and repository state |
+| `$cc:rescue` | Planned | Delegate a real task: diagnosis, a fix, an implementation pass |
+| `$cc:status` | Planned | Progress of background runs |
+| `$cc:result` | Planned | Fetch a finished run |
+| `$cc:cancel` | Planned | Stop a background run |
+| `$cc:transfer` | Planned | Hand the current Codex session's context to a fresh Claude Code session |
 
 ## Requirements
 
@@ -54,7 +53,7 @@ Once published:
 
 ```bash
 codex plugin marketplace add ianandersonlol/cc-plugin-codex
-codex plugin add cc@cc-plugin-codex
+codex plugin add cc@cc
 ```
 
 For local development against a checkout:
@@ -66,12 +65,11 @@ codex plugin add cc@cc
 
 ## Design in one paragraph
 
-Every command resolves a review or task scope with git, renders a prompt from
+Every review skill resolves a review scope with git, renders a prompt from
 `prompts/`, and runs a single `claude -p` subprocess with `--safe-mode`,
 a read-only tool allowlist, and `--json-schema schemas/review-output.schema.json`.
 Claude Code returns a validated object on `structured_output`, which the runtime
-renders for the Codex TUI. Long runs detach and are tracked in a state file so
-`/cc:status` and `/cc:result` can pick them up later.
+renders for Codex.
 
 `--safe-mode` is load-bearing: it keeps subscription auth working while
 disabling `AGENTS.md`/`CLAUDE.md`, MCP servers, and user plugins in the
@@ -81,13 +79,13 @@ back and looping.
 
 ## Safety posture
 
-`/cc:review` and `/cc:adversarial-review` are read-only by construction: a tool
+`$cc:review` and `$cc:adversarial-review` are read-only by construction: a tool
 allowlist covering `Read`, `Grep`, `Glob`, and read-only `git` subcommands, with
 `Edit`/`Write`/`NotebookEdit` explicitly denied. Any attempt to step outside it
 lands in `permission_denials` on the result envelope, so the runtime can report
 it rather than silently swallow it.
 
-`/cc:rescue` is the only write-capable command, and it is opt-in per invocation.
+The planned `$cc:rescue` skill will be the only write-capable entry point.
 
 ## License
 

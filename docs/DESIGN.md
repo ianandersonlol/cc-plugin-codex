@@ -13,12 +13,13 @@ Everything marked **verified** below was checked against a real install
 `codex plugin marketplace add <git-url>`, and `plugins` / `plugin_sharing` /
 `remote_plugin` / `multi_agent` all sit at `stable` in `codex features list`.
 
-**Verified — the plugin layout is nearly identical to Claude Code's.**
+**Verified — Codex loads plugin skills from the installed cache.** The active
+entry points use `skills/<name>/SKILL.md` and resolve the plugin root relative
+to that file. They do not depend on plugin-root environment variables.
 
 ```
 plugin-root/
   .codex-plugin/plugin.json    manifest ("skills": "./skills/", interface metadata)
-  commands/*.md                slash commands
   skills/<name>/SKILL.md       same SKILL.md format
   agents/*.md                  subagents
   hooks.json                   same schema as Claude Code, incl. matchers
@@ -45,8 +46,8 @@ commands carry `description` / `argument-hint` / `allowed-tools` frontmatter.
 | `codex-plugin-cc` (Claude Code → Codex) | `cc` (Codex → Claude Code) |
 |---|---|
 | `.claude-plugin/plugin.json` + `marketplace.json` | `.codex-plugin/plugin.json` + `.agents/plugins/marketplace.json` |
-| `commands/*.md` → `/codex:review` | `commands/*.md` → `/cc:review` |
-| `skills/*/SKILL.md` | identical format |
+| `commands/*.md` → `/codex:review` | `skills/*/SKILL.md` → `$cc:review` |
+| `skills/*/SKILL.md` | identical format and native plugin entry point |
 | `agents/codex-rescue.md` | `agents/cc-rescue.md` |
 | `hooks/hooks.json` stop gate | `hooks.json`, same schema — see open questions |
 | `scripts/codex-companion.mjs` | `scripts/cc-companion.mjs` |
@@ -230,25 +231,14 @@ absent.
 
 ## Open questions
 
-1. **Which variable names the plugin root in a command body?** *Resolved —
-   `CLAUDE_PLUGIN_ROOT`.* There is no `CODEX_PLUGIN_ROOT`: the binary contains
-   20+ `CODEX_*` env literals (`CODEX_HOME`, `CODEX_SANDBOX`, `CODEX_THREAD_ID`,
-   …) and zero occurrences of `CODEX_PLUGIN_ROOT`. What it does carry is the
-   pair `PLUGIN_ROOT` / `CLAUDE_PLUGIN_ROOT` (and `PLUGIN_DATA` /
-   `CLAUDE_PLUGIN_DATA`) — a canonical name plus a Claude-plugin compatibility
-   alias, which is why plugins imported from that ecosystem work unchanged.
-
-   This cost a real failure worth recording. The first command bodies used
-   `$CODEX_PLUGIN_ROOT`, which expanded to nothing, and paired it with a
-   fallback telling the model to look for the runtime under the plugin cache.
-   The model found `codex-companion.mjs` — the *forward* plugin's runtime,
-   installed in a sibling cache directory — decided it was close enough to
-   `cc-companion.mjs`, and ran it. `/cc:setup` returned a confident, correct,
-   entirely wrong report about Codex's own installation.
-
-   Two rules came out of it: a command must never be told to search for its
-   own runtime, and every command's output must carry an identity stamp so a
-   substitute cannot pass for the real thing.
+1. **How does a skill find the plugin root?** *Resolved — from its own installed
+   path.* A skill at `skills/<name>/SKILL.md` treats `../..` from its containing
+   directory as the plugin root, then runs `scripts/cc-companion.mjs` there.
+   This was forward-tested in a fresh Codex session against the cache-busted
+   installed plugin. Do not depend on `PLUGIN_ROOT`, `CLAUDE_PLUGIN_ROOT`, or a
+   filesystem search fallback; those variables were empty in the failed
+   command-style integration test, and searching risks selecting an unrelated
+   companion from a sibling plugin cache.
 
 2. **Hooks.** *Verified* — Codex runs `Stop` hooks; a `codex exec` run emits
    `hook: Stop` / `hook: Stop Completed`. Plugin `hooks.json` uses the Claude
