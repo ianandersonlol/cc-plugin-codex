@@ -1,0 +1,4 @@
+interface:
+  display_name: "CC Setup"
+  short_description: "Check whether Claude Code is ready"
+  default_prompt: "Use $cc:setup to check whether Claude Code is ready for cc."

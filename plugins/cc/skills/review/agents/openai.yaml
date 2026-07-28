@@ -1,0 +1,4 @@
+interface:
+  display_name: "CC Review"
+  short_description: "Review local git changes with Claude Code"
+  default_prompt: "Use $cc:review to review the current git changes with Claude Code."

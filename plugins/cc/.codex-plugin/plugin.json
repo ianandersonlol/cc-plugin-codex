@@ -1,6 +1,6 @@
 {
   "name": "cc",
-  "version": "0.1.1",
+  "version": "0.1.1+codex.20260728185338",
   "description": "Delegate code review and implementation work to Claude Code from inside Codex.\n\nUse cc when you want an independent second opinion on a diff, an adversarial pass over a risky change before merge, or to hand a substantial task to another agent. Reviews run read-only against the real repository.",
   "author": {
     "name": "Ian Anderson"

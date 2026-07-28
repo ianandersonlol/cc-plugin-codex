@@ -1,0 +1,4 @@
+interface:
+  display_name: "CC Adversarial Review"
+  short_description: "Challenge local changes with Claude Code"
+  default_prompt: "Use $cc:adversarial-review to challenge the design and risks in the current git changes."
