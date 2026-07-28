@@ -39,7 +39,7 @@ const RESULT_ENVELOPE = JSON.stringify([
 ]);
 
 test("review args never carry the prompt", () => {
-  const args = buildReviewArgs({ model: "sonnet", schemaPath: "/p/schema.json" });
+  const args = buildReviewArgs({ model: "sonnet", schema: '{"type":"object"}' });
   assert.equal(args.includes("-p"), true);
   assert.equal(
     args.some((arg) => arg.length > 200),
@@ -53,7 +53,7 @@ test("review args never pass --bare, which would break subscription auth", () =>
 });
 
 test("review args request safe mode and structured json", () => {
-  const args = buildReviewArgs({ schemaPath: "/p/schema.json" });
+  const args = buildReviewArgs({ schema: '{"type":"object"}' });
   assert.equal(args.includes("--safe-mode"), true);
   assert.deepEqual(args.slice(args.indexOf("--output-format"), args.indexOf("--output-format") + 2), [
     "--output-format",
@@ -61,7 +61,7 @@ test("review args request safe mode and structured json", () => {
   ]);
   assert.deepEqual(args.slice(args.indexOf("--json-schema"), args.indexOf("--json-schema") + 2), [
     "--json-schema",
-    "/p/schema.json"
+    '{"type":"object"}'
   ]);
 });
 
@@ -154,7 +154,7 @@ test("runClaude sends the prompt on stdin and shells out only for shims", () => 
     binary: { path: "/home/ian/.local/bin/claude", kind: "direct", requiresShell: false },
     runCommandImpl: runner,
     env: { PATH: "/usr/bin", ANTHROPIC_API_KEY: "sk-nope" },
-    schemaPath: "/p/schema.json"
+    schema: '{"type":"object"}'
   });
 
   const [call] = runner.calls;
@@ -170,7 +170,7 @@ test("runClaude quotes every argument when forced through a shim", () => {
     binary: { path: "C:\\npm\\claude.cmd", kind: "shim", requiresShell: true },
     runCommandImpl: runner,
     env: {},
-    schemaPath: "C:\\My Plugins\\schema.json"
+    schema: '{"type":"object"}'
   });
 
   const [call] = runner.calls;

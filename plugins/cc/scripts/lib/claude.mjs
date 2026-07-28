@@ -83,6 +83,28 @@ export function quoteForCmd(arg) {
 }
 
 /**
+ * Read a JSON Schema from disk and minify it.
+ *
+ * `--json-schema` takes the schema document itself, not a path to one. Minifying
+ * keeps the argument well clear of the Windows command-line limit.
+ */
+export function readSchema(schemaPath) {
+  return JSON.stringify(stripSchemaDialect(JSON.parse(fs.readFileSync(schemaPath, "utf8"))));
+}
+
+/**
+ * Drop the `$schema` dialect declaration.
+ *
+ * The file keeps it for editor tooling, but Claude Code's validator rejects a
+ * schema whose dialect it cannot resolve ("no schema with key or ref
+ * https://json-schema.org/draft/2020-12/schema").
+ */
+export function stripSchemaDialect(schema) {
+  const { $schema, ...rest } = schema;
+  return rest;
+}
+
+/**
  * Build the argv for a review run. The prompt is intentionally absent — it
  * goes on stdin.
  */
@@ -92,8 +114,8 @@ export function buildReviewArgs(options = {}) {
   if (options.model) {
     args.push("--model", options.model);
   }
-  if (options.schemaPath) {
-    args.push("--json-schema", options.schemaPath);
+  if (options.schema) {
+    args.push("--json-schema", options.schema);
   }
 
   const allowed = options.allowedTools ?? READ_ONLY_TOOLS;
