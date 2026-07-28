@@ -224,21 +224,28 @@ Platform behaviour is injected, not detected: `classifyExecutable`,
 exercised on every OS in the matrix, and the matrix additionally verifies the
 real filesystem and separator behaviour per platform.
 
-Current suite: 36 tests, no network, no Claude Code install required.
+Current suite: 70 tests, no network, no Claude Code install required. The git
+tests build a real repository in a temp directory and skip cleanly where git is
+absent.
 
 ## Open questions
 
-1. **Do plugin-supplied hooks actually fire?** `hooks` is `stable/true` in
-   `codex features list`, but `plugin_hooks` reads `removed/false`. Codex's
-   vocabulary is ambiguous here — `steer` shows `removed/true`, i.e. graduated
-   and on. Test empirically before designing the stop-time review gate around it.
-2. **Is there a plugin-root variable for command bodies?** No Codex-native
-   plugin uses one. Hooks use `./scripts/...` and `.mcp.json` uses
-   `"command": "./bin/...", "cwd": "."`, both plugin-root-relative. Claude Code's
-   `${CLAUDE_PLUGIN_ROOT}` appears only in plugins imported from the Claude
-   ecosystem. If no equivalent exists, wiring the runtime through `.mcp.json`
-   sidesteps the question entirely — and makes `cc` model-invocable rather than
-   only slash-invocable.
+1. **Which variable names the plugin root in a command body?** *Partly
+   verified* — the Codex binary carries both `PLUGIN_ROOT` and
+   `CLAUDE_PLUGIN_ROOT` (alongside `PLUGIN_DATA`/`CLAUDE_PLUGIN_DATA`), so a
+   canonical name and a Claude-compat alias both exist. Which one is exported
+   into a command's shell has not been confirmed, because `codex exec` does not
+   expand slash commands — it passes `/cc:setup` through as literal text, so
+   this needs an interactive TUI run. The commands use `$CODEX_PLUGIN_ROOT` and
+   document the fallbacks inline so the model can recover either way.
+
+2. **Hooks.** *Verified* — Codex runs `Stop` hooks; a `codex exec` run emits
+   `hook: Stop` / `hook: Stop Completed`. Plugin `hooks.json` uses the Claude
+   Code schema. The stop-time review gate is therefore portable. Supported
+   events seen in the binary: `pre_tool_use`, `permission_request`,
+   `post_tool_use`, `pre_compact`, `post_compact`, `session_start`,
+   `user_prompt_submit`, `subagent_start`, `subagent_stop`, plus `Stop`.
+
 3. **Sandbox and network.** Codex sandboxes tool calls; `claude -p` needs
    network. On a default `workspace-write` policy this fails. `/cc:setup` must
    detect it and say so plainly.
@@ -256,3 +263,17 @@ Current suite: 36 tests, no network, no Claude Code install required.
 4. `/cc:rescue` with worktree isolation (`claude --worktree`)
 5. `/cc:transfer` reading Codex rollout JSONL
 6. Stop-time review gate, if and only if open question 1 resolves yes
+
+## Verified end to end
+
+`adversarial-review` against a scratch repository with a deliberate bug
+(`applyDiscount` reading an unknown key from a lookup table) returned a
+schema-valid review in 60.9s over 7 turns: a HIGH finding for the NaN
+corruption and a MEDIUM finding for non-idempotent reapplication that the
+prompt never hinted at. No permission denials — the read-only policy held
+without the reviewer trying to escape it.
+
+Two defects surfaced only in that run, neither reachable by unit tests:
+`--json-schema` takes the schema document inline rather than a path, and its
+validator rejects a `$schema` dialect it cannot resolve, so `readSchema`
+strips the declaration before the call.

@@ -25,6 +25,10 @@ A reviewer proposing a fix is evidence, not authorization.
 node "$CODEX_PLUGIN_ROOT/scripts/cc-companion.mjs" adversarial-review $ARGUMENTS
 ```
 
+If `$CODEX_PLUGIN_ROOT` is empty, try `$CLAUDE_PLUGIN_ROOT`. If both are empty,
+the runtime is at `<codex-home>/plugins/cache/cc/cc/<version>/scripts/cc-companion.mjs`
+(`~/.codex` unless `CODEX_HOME` is set).
+
 Pass `$ARGUMENTS` straight through — the runtime parses it. Do not strip flags,
 reword the user's focus text, or soften the adversarial framing.
 

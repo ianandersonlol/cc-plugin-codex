@@ -18,6 +18,10 @@ anything. Run the review and return its output verbatim.
 node "$CODEX_PLUGIN_ROOT/scripts/cc-companion.mjs" review $ARGUMENTS
 ```
 
+If `$CODEX_PLUGIN_ROOT` is empty, try `$CLAUDE_PLUGIN_ROOT`. If both are empty,
+the runtime is at `<codex-home>/plugins/cache/cc/cc/<version>/scripts/cc-companion.mjs`
+(`~/.codex` unless `CODEX_HOME` is set).
+
 Pass `$ARGUMENTS` straight through — the runtime parses it. Anything that is not
 a recognised flag becomes the reviewer's focus text, so do not drop it.
 

@@ -13,6 +13,10 @@ Raw arguments: `$ARGUMENTS`
 node "$CODEX_PLUGIN_ROOT/scripts/cc-companion.mjs" setup $ARGUMENTS
 ```
 
+If `$CODEX_PLUGIN_ROOT` is empty, try `$CLAUDE_PLUGIN_ROOT`. If both are empty,
+the runtime is at `<codex-home>/plugins/cache/cc/cc/<version>/scripts/cc-companion.mjs`
+(`~/.codex` unless `CODEX_HOME` is set).
+
 ## Return the result
 
 Return the output verbatim, then help with any listed next step if the user asks.
