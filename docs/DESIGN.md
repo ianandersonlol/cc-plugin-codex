@@ -155,6 +155,77 @@ forward direction, not less: a detached child writing to a state file, plus
 Worth checking before building it: `~/.codex/process_manager/chat_processes.json`
 exists on disk, which hints Codex may manage background processes natively.
 
+## Cross-platform contract
+
+Windows, macOS, and Linux are first-class targets. The forward plugin's commit
+history is a useful map of where this goes wrong — `.cmd` shim ENOENT (#13),
+app-server ENOENT (#55), Git Bash `SHELL` handling (#178), and most recently
+`db52e28 Remove shell expansion for git commands` (#447), whose comment states
+the rule directly:
+
+> Git is directly executable on Windows. Repository-derived arguments must never
+> pass through a shell.
+
+Its CI, however, is ubuntu-only. `cc` runs a 3-OS × 2-Node matrix from the first
+commit.
+
+### Rules
+
+**1. The prompt goes on stdin, never in argv.** *Verified* — `claude -p` reads
+its prompt from stdin. This is not a stylistic choice: Windows caps a command
+line near 32k characters, and a review prompt carrying a scope summary exceeds
+it. stdin also removes every quoting question about the prompt body.
+
+**2. `shell: false` by default, everywhere.** `runCommand` in `lib/platform.mjs`
+defaults to no shell on all platforms — stricter than the forward plugin, which
+defaults to a shell on Windows. Anything derived from the repository (branch
+names, paths, focus text) must never reach a shell.
+
+**3. Resolve the executable; don't make the shell find it.** Node refuses to
+spawn `.cmd`/`.bat`/`.ps1` without a shell (EINVAL, hardened in Node 18.20.2 /
+20.12.2), which is the real cause of the "add `shell: true` for .cmd shims"
+class of fix. `resolveClaudeBinary` prefers a native install
+(`~/.local/bin/claude`, `.exe` on Windows) over a PATH lookup, and `where`
+results are sorted so a real binary wins over a shim. Only if nothing but a shim
+exists does it fall back to a shell, and then every argument is quoted through
+`quoteForCmd`. `CC_CLAUDE_BIN` overrides all of it.
+
+This matters for the tool allowlist specifically: `Bash(git diff:*)` contains
+parentheses, which are cmd.exe metacharacters.
+
+**4. `node:path` for every path; `fileURLToPath` for every module-relative
+path.** `new URL(...).pathname` yields `/C:/Users/...` on Windows and
+percent-encodes spaces. `pluginRootFrom` uses `fileURLToPath` and is tested
+against a path containing a space.
+
+**5. Split on `/\r?\n/`.** Git on Windows emits CRLF, and a repo with
+`core.autocrlf=true` emits CRLF inside diff bodies too. `splitLines` is the only
+sanctioned splitter.
+
+**6. State lives under `CODEX_HOME`, not `os.tmpdir()`.** `/cc:result` has to
+survive a reboot, and Windows cleans temp aggressively. Following `CODEX_HOME`
+(default `~/.codex`) gives one rule for all three platforms instead of an
+XDG/AppData/Application Support split.
+
+**7. Atomic writes retry.** `fs.rename` over an existing file is atomic on
+POSIX but fails on Windows with EPERM/EBUSY when a scanner or reader briefly
+holds the target. `writeFileAtomic` retries before surfacing the error.
+
+**8. Process termination is platform-specific.** `process.kill(-pid)` kills a
+process group on POSIX and does nothing useful on Windows; there it is
+`taskkill /PID <pid> /T /F`. The forward plugin's `terminateProcessTree` handles
+this well and ports directly — lift it when `/cc:cancel` lands.
+
+### How this is tested
+
+Platform behaviour is injected, not detected: `classifyExecutable`,
+`findExecutable`, and `resolveClaudeBinary` all take `platform`, `env`,
+`homedir`, and the command runner as options. Windows path handling is therefore
+exercised on every OS in the matrix, and the matrix additionally verifies the
+real filesystem and separator behaviour per platform.
+
+Current suite: 36 tests, no network, no Claude Code install required.
+
 ## Open questions
 
 1. **Do plugin-supplied hooks actually fire?** `hooks` is `stable/true` in

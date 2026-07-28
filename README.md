@@ -8,11 +8,24 @@ Codex, and `cc` gives you a second engineering voice on demand.
 
 ## Status
 
-**Foundation laid; runtime not yet implemented.** The manifests, prompts, output
-schema, and design are in place and the plugin is installable. The
-`scripts/cc-companion.mjs` runtime that actually shells out to Claude Code is
-the next piece of work. See [`docs/DESIGN.md`](docs/DESIGN.md) for the full
-component map and the findings the design rests on.
+**Foundation laid; commands not yet wired.** The manifests, prompts, output
+schema, and the cross-platform process/path layer are in place, tested, and the
+plugin installs into Codex. The `cc-companion.mjs` entrypoint and the slash
+commands are the next piece of work. See [`docs/DESIGN.md`](docs/DESIGN.md) for
+the component map and the findings the design rests on.
+
+## Platform support
+
+Windows, macOS, and Linux are first-class, verified by a 3-OS × 2-Node CI matrix
+from the first commit. Platform behaviour is injected rather than detected, so
+Windows path and shim handling is exercised on every runner, not only on
+Windows. See the cross-platform contract in [`docs/DESIGN.md`](docs/DESIGN.md)
+for the rules — prompt on stdin, `shell: false` by default, resolve the
+executable rather than letting a shell find it, `CODEX_HOME` for state.
+
+```bash
+npm test    # 36 tests, no network, no Claude Code install required
+```
 
 ## Planned surface
 

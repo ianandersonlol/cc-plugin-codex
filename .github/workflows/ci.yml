@@ -1,0 +1,67 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: test (${{ matrix.os }}, node ${{ matrix.node }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        node: ['20', '22']
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+
+      - name: Run test suite
+        run: npm test
+
+  manifest:
+    name: manifest sanity
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Validate JSON manifests
+        shell: bash
+        run: |
+          set -euo pipefail
+          for file in \
+            .agents/plugins/marketplace.json \
+            plugins/cc/.codex-plugin/plugin.json \
+            plugins/cc/schemas/review-output.schema.json
+          do
+            node -e "JSON.parse(require('node:fs').readFileSync('$file','utf8'))"
+            echo "ok: $file"
+          done
+
+      - name: Plugin version matches package version
+        shell: bash
+        run: |
+          set -euo pipefail
+          pkg=$(node -p "require('./package.json').version")
+          plugin=$(node -p "require('./plugins/cc/.codex-plugin/plugin.json').version")
+          test "$pkg" = "$plugin" || {
+            echo "version mismatch: package.json=$pkg plugin.json=$plugin" >&2
+            exit 1
+          }
+          echo "ok: $pkg"
