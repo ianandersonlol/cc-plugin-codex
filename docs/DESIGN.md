@@ -230,14 +230,25 @@ absent.
 
 ## Open questions
 
-1. **Which variable names the plugin root in a command body?** *Partly
-   verified* — the Codex binary carries both `PLUGIN_ROOT` and
-   `CLAUDE_PLUGIN_ROOT` (alongside `PLUGIN_DATA`/`CLAUDE_PLUGIN_DATA`), so a
-   canonical name and a Claude-compat alias both exist. Which one is exported
-   into a command's shell has not been confirmed, because `codex exec` does not
-   expand slash commands — it passes `/cc:setup` through as literal text, so
-   this needs an interactive TUI run. The commands use `$CODEX_PLUGIN_ROOT` and
-   document the fallbacks inline so the model can recover either way.
+1. **Which variable names the plugin root in a command body?** *Resolved —
+   `CLAUDE_PLUGIN_ROOT`.* There is no `CODEX_PLUGIN_ROOT`: the binary contains
+   20+ `CODEX_*` env literals (`CODEX_HOME`, `CODEX_SANDBOX`, `CODEX_THREAD_ID`,
+   …) and zero occurrences of `CODEX_PLUGIN_ROOT`. What it does carry is the
+   pair `PLUGIN_ROOT` / `CLAUDE_PLUGIN_ROOT` (and `PLUGIN_DATA` /
+   `CLAUDE_PLUGIN_DATA`) — a canonical name plus a Claude-plugin compatibility
+   alias, which is why plugins imported from that ecosystem work unchanged.
+
+   This cost a real failure worth recording. The first command bodies used
+   `$CODEX_PLUGIN_ROOT`, which expanded to nothing, and paired it with a
+   fallback telling the model to look for the runtime under the plugin cache.
+   The model found `codex-companion.mjs` — the *forward* plugin's runtime,
+   installed in a sibling cache directory — decided it was close enough to
+   `cc-companion.mjs`, and ran it. `/cc:setup` returned a confident, correct,
+   entirely wrong report about Codex's own installation.
+
+   Two rules came out of it: a command must never be told to search for its
+   own runtime, and every command's output must carry an identity stamp so a
+   substitute cannot pass for the real thing.
 
 2. **Hooks.** *Verified* — Codex runs `Stop` hooks; a `codex exec` run emits
    `hook: Stop` / `hook: Stop Completed`. Plugin `hooks.json` uses the Claude

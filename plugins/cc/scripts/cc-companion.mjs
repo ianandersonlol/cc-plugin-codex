@@ -6,6 +6,7 @@
  * needs happens here, so the command bodies stay thin prompts rather than
  * orchestration logic.
  */
+import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
 
@@ -33,6 +34,15 @@ const PLUGIN_ROOT = pluginRootFrom(import.meta.url, 1);
 const SCHEMA_PATH = path.join(PLUGIN_ROOT, "schemas", "review-output.schema.json");
 
 const DEFAULT_MODEL = "sonnet";
+
+function pluginVersion() {
+  try {
+    const manifest = path.join(PLUGIN_ROOT, ".codex-plugin", "plugin.json");
+    return JSON.parse(fs.readFileSync(manifest, "utf8")).version ?? null;
+  } catch {
+    return null;
+  }
+}
 
 const REVIEW_SPEC = {
   valueOptions: ["cwd", "base", "scope", "model"],
@@ -91,6 +101,7 @@ function buildSetupReport(cwd) {
   }
 
   return {
+    version: pluginVersion(),
     ready: Boolean(binary.path) && inRepo,
     node: { available: true, detail: (node.stdout || "").trim() },
     claude: {

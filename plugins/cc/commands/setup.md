@@ -10,12 +10,17 @@ Raw arguments: `$ARGUMENTS`
 ## Run it
 
 ```bash
-node "$CODEX_PLUGIN_ROOT/scripts/cc-companion.mjs" setup $ARGUMENTS
+node "$CLAUDE_PLUGIN_ROOT/scripts/cc-companion.mjs" setup $ARGUMENTS
 ```
 
-If `$CODEX_PLUGIN_ROOT` is empty, try `$CLAUDE_PLUGIN_ROOT`. If both are empty,
-the runtime is at `<codex-home>/plugins/cache/cc/cc/<version>/scripts/cc-companion.mjs`
-(`~/.codex` unless `CODEX_HOME` is set).
+`CLAUDE_PLUGIN_ROOT` is the variable Codex exports for plugin roots (`PLUGIN_ROOT`
+is a synonym). The name is Codex's, not this plugin's.
+
+**If that variable is empty, stop and report that cc is not installed correctly.**
+Do not search the filesystem for a replacement, and never run a script whose
+filename is not exactly `cc-companion.mjs` — a similarly named
+`codex-companion.mjs` from an unrelated plugin may be installed nearby, and
+running it produces confidently wrong output.
 
 ## Return the result
 

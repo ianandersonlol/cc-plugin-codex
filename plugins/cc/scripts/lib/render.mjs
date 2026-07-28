@@ -160,7 +160,10 @@ export function renderWarnings(result = {}) {
 }
 
 export function renderSetupReport(report) {
-  const lines = ["cc setup", ""];
+  // Identity stamp: if an unrelated companion script ever runs in cc's place,
+  // the missing header makes it obvious rather than plausible.
+  const version = report.version ? ` v${report.version}` : "";
+  const lines = [`cc${version} — Claude Code delegation for Codex`, ""];
 
   const mark = (ok) => (ok ? "ok" : "MISSING");
   lines.push(`Node:         ${mark(report.node.available)} ${report.node.detail ?? ""}`.trimEnd());
