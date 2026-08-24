@@ -1,5 +1,5 @@
 /**
- * Rendering for the Codex terminal. Plain text with light markdown — no ANSI,
+ * Rendering for a host terminal. Plain text with light markdown — no ANSI,
  * since the output is returned verbatim by a slash command and may be captured,
  * piped, or re-read by the model.
  */
@@ -166,7 +166,7 @@ export function renderSetupReport(report) {
   // Identity stamp: if an unrelated companion script ever runs in cc's place,
   // the missing header makes it obvious rather than plausible.
   const version = report.version ? ` v${report.version}` : "";
-  const lines = [`cc${version} — Claude Code delegation for Codex`, ""];
+  const lines = [`cc${version} — Claude Code delegation for Codex and Antigravity`, ""];
 
   const mark = (ok) => (ok ? "ok" : "MISSING");
   lines.push(`Node:         ${mark(report.node.available)} ${report.node.detail ?? ""}`.trimEnd());

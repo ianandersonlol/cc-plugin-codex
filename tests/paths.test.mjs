@@ -49,6 +49,33 @@ test("stateDir lives under the codex home, not the temp directory", () => {
   assert.equal(dir.startsWith(os.tmpdir()), false);
 });
 
+test("CC_STATE_DIR overrides the host home", () => {
+  // The escape hatch for a host that is not Codex. Antigravity does not expose
+  // its per-install home to plugin subprocesses, so the location is explicit
+  // rather than guessed.
+  const fakeHome = path.join(path.sep, "home", "ian");
+  const override = path.join(path.sep, "var", "cc-state");
+  assert.equal(stateDir({ CC_STATE_DIR: override }, fakeHome), path.normalize(override));
+  assert.equal(stateDir({ CC_STATE_DIR: "   " }, fakeHome), path.join(fakeHome, ".codex", "cc", "jobs"));
+});
+
+test("CC_STATE_DIR wins over CODEX_HOME", () => {
+  const override = path.join(path.sep, "var", "cc-state");
+  const env = { CC_STATE_DIR: override, CODEX_HOME: path.join(path.sep, "custom", "codex") };
+  assert.equal(stateDir(env, path.sep), path.normalize(override));
+});
+
+test("a relative CC_STATE_DIR is rejected rather than resolved", () => {
+  // path.resolve() would anchor it to process.cwd(), which on Antigravity is
+  // ~/.gemini/antigravity-cli — a silently wrong home for state meant to
+  // outlive the session.
+  const fakeHome = path.join(path.sep, "home", "ian");
+  assert.throws(
+    () => stateDir({ CC_STATE_DIR: path.join(".cc-state") }, fakeHome),
+    /must be an absolute path/
+  );
+});
+
 test("splitLines handles LF, CRLF, and mixed output", () => {
   assert.deepEqual(splitLines("a\nb"), ["a", "b"]);
   assert.deepEqual(splitLines("a\r\nb"), ["a", "b"]);

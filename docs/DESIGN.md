@@ -4,8 +4,12 @@
 call Codex; this one lets Codex call Claude Code. The two ecosystems turn out to
 be close enough that most of the work is transport, not architecture.
 
+It now runs on Antigravity too — see [Antigravity (`agy`)](#antigravity-agy)
+for what that cost, which was less than expected.
+
 Everything marked **verified** below was checked against a real install
-(Codex CLI 0.144.5, Claude Code 2.1.220) rather than assumed.
+(Codex CLI 0.144.5, Claude Code 2.1.220, Antigravity CLI `agy` on macOS)
+rather than assumed.
 
 ## Why this is tractable
 
@@ -45,7 +49,7 @@ commands carry `description` / `argument-hint` / `allowed-tools` frontmatter.
 
 | `codex-plugin-cc` (Claude Code → Codex) | `cc` (Codex → Claude Code) |
 |---|---|
-| `.claude-plugin/plugin.json` + `marketplace.json` | `.codex-plugin/plugin.json` + `.agents/plugins/marketplace.json` |
+| `.claude-plugin/plugin.json` + `marketplace.json` | `.codex-plugin/plugin.json` + `.agents/plugins/marketplace.json`, plus `plugin.json` at the plugin root for Antigravity |
 | `commands/*.md` → `/codex:review` | `skills/*/SKILL.md` → `$cc:review` |
 | `skills/*/SKILL.md` | identical format and native plugin entry point |
 | `agents/codex-rescue.md` | `agents/cc-rescue.md` |
@@ -157,6 +161,87 @@ forward direction, not less: a detached child writing to a state file, plus
 Worth checking before building it: `~/.codex/process_manager/chat_processes.json`
 exists on disk, which hints Codex may manage background processes natively.
 
+## Antigravity (`agy`)
+
+Antigravity's customization system is documented in the CLI's own bundled
+`agy-customizations` skill (`~/.gemini/antigravity-cli/builtin/skills/`), which
+is the authority used below alongside the `agy` binary itself.
+
+**Verified — the plugin format is nearly the Codex one.** A plugin is a
+directory under a `plugins/` folder in a customization root:
+
+```
+plugins/<name>/
+  plugin.json        required marker; the only field is an optional "name"
+  skills/<name>/SKILL.md
+  hooks.json  mcp_config.json  rules/AGENTS.md    all optional
+```
+
+Customization roots are the workspace (`.agents/`, also `.agent/`, `_agents/`,
+`_agent/`) and the global `~/.gemini/config/`. `skills/<name>/SKILL.md` with
+`name` + `description` frontmatter is the same file Codex loads, so the three
+skills transferred unchanged in structure.
+
+**Verified — the manifest must sit at the plugin root.** `agy plugin validate`
+stats `<root>/plugin.json` and accepts nothing else; it rejects both
+`.codex-plugin/plugin.json` and `.claude-plugin/plugin.json`. That was the only
+hard blocker. Adding a root `plugin.json` alongside the existing
+`.codex-plugin/` one leaves both hosts happy — `agy plugin validate` and Codex's
+own `validate_plugin.py` both pass on the same directory, so there is one plugin
+tree rather than two packagings. `pluginVersion()` prefers the root manifest,
+since Codex's dev loop rewrites the `.codex-plugin` version with a cachebuster.
+
+**Verified — `$ARGUMENTS` is NOT substituted.** This was the one real risk, and
+it needed an experiment rather than a grep: neither the `agy` binary nor the
+146MB language server contains the token, and a probe skill echoing
+`PROBE-ARGS=[$ARGUMENTS]` returned the token literally. What the user typed does
+still reach the model — a second probe echoed
+`--model fable --effort high focus on auth` back verbatim.
+
+The failure mode this creates is nasty and silent: a shell expands an
+unsubstituted `$ARGUMENTS` to the empty string, so every flag the user typed
+disappears and the review runs with defaults while looking like it worked. So
+the token never appears inside a fenced command any more. It stays in the prose
+as the raw argument line Codex rewrites, and the fence carries an `<arguments>`
+placeholder the skill resolves from either source. `tests/skills.test.mjs`
+asserts no fenced block in any skill contains `$ARGUMENTS`.
+
+**Verified — the shell does not run in the workspace.** `agy -p` runs commands
+from `~/.gemini/antigravity-cli`, not the repository, so an implicit
+`process.cwd()` finds no git repo at all. Attaching a workspace with
+`--add-dir <repo>` makes the cwd the repository. Rather than depend on that, all
+three skills pass `--cwd "<repo-root>"` explicitly, positioned before
+`<arguments>` so a `--cwd` the user typed still wins — `parseArgs` takes the
+last occurrence.
+
+**Verified — skills are slash commands.** A skill named `review` is `/review`,
+alongside semantic auto-invocation. Commands (`commands/*.md`) are also accepted
+and reported as "converted to skills", so the Claude-format command directory
+would work too; this plugin has no need of one.
+
+**Verified — install is from a local directory.** `agy plugin install <dir>`
+copies the whole tree (`scripts/`, `prompts/`, `schemas/` included) into
+`~/.gemini/config/plugins/<name>/`, which is what keeps the `../..` plugin-root
+resolution working after install. No marketplace is registered in the current
+build: every candidate name returns `unknown marketplace`, so `plugin@marketplace`
+is not yet a distribution path. Plugins are read at session start.
+
+### Not ported
+
+**Hooks.** Antigravity's `hooks.json` is a different shape from the Claude/Codex
+schema — named hooks at the top level (`{"<name>": {"PostToolUse": [...]}}`)
+rather than `{"hooks": {...}}`, matchers targeting Antigravity tool names like
+`run_command` instead of `Bash`/`Write`/`Edit`, only `type: "command"`, and
+synchronous execution that blocks the agent loop. Events are `PreToolUse`,
+`PostToolUse`, `PreInvocation`, `PostInvocation`, and `Stop`. The stop-time
+review gate is therefore two implementations, not one file.
+
+**State.** `stateDir()` still follows `CODEX_HOME`. Antigravity does not expose
+its per-install home to plugin subprocesses in any form checked here, so rather
+than guess, `CC_STATE_DIR` overrides the location outright. Nothing writes there
+yet — the background job commands are unbuilt — and whichever commit builds them
+should settle the Antigravity default properly.
+
 ## Cross-platform contract
 
 Windows, macOS, and Linux are first-class targets. The forward plugin's commit
@@ -226,9 +311,11 @@ Platform behaviour is injected, not detected: `classifyExecutable`,
 exercised on every OS in the matrix, and the matrix additionally verifies the
 real filesystem and separator behaviour per platform.
 
-Current suite: 70 tests, no network, no Claude Code install required. The git
+Current suite: 104 tests, no network, no Claude Code install required. The git
 tests build a real repository in a temp directory and skip cleanly where git is
-absent.
+absent. `tests/manifests.test.mjs` holds the two manifests to the same name and
+version, and asserts the layout `agy plugin validate` checks — agy cannot be
+installed on a CI runner, so the shape it requires is asserted instead.
 
 ## Open questions
 
@@ -241,16 +328,25 @@ absent.
    command-style integration test, and searching risks selecting an unrelated
    companion from a sibling plugin cache.
 
-2. **Hooks.** *Verified* — Codex runs `Stop` hooks; a `codex exec` run emits
-   `hook: Stop` / `hook: Stop Completed`. Plugin `hooks.json` uses the Claude
-   Code schema. The stop-time review gate is therefore portable. Supported
-   events seen in the binary: `pre_tool_use`, `permission_request`,
-   `post_tool_use`, `pre_compact`, `post_compact`, `session_start`,
-   `user_prompt_submit`, `subagent_start`, `subagent_stop`, plus `Stop`.
+2. **Hooks.** *Verified, and host-specific.* Codex runs `Stop` hooks; a
+   `codex exec` run emits `hook: Stop` / `hook: Stop Completed`, and plugin
+   `hooks.json` uses the Claude Code schema. Supported events seen in the
+   binary: `pre_tool_use`, `permission_request`, `post_tool_use`, `pre_compact`,
+   `post_compact`, `session_start`, `user_prompt_submit`, `subagent_start`,
+   `subagent_stop`, plus `Stop`. Antigravity's `hooks.json` is a different
+   shape — see [Antigravity (`agy`)](#antigravity-agy) — so the stop-time review
+   gate is two implementations rather than one portable file.
 
 3. **Sandbox and network.** Codex sandboxes tool calls; `claude -p` needs
-   network. On a default `workspace-write` policy this fails. `/cc:setup` must
-   detect it and say so plainly.
+   network. On a default `workspace-write` policy this fails. `setup` must
+   detect it and say so plainly. Antigravity has the same shape of problem
+   behind `agy --sandbox`, which enables terminal restrictions.
+
+5. **Where does Antigravity keep per-install state?** *Open.* Nothing in the
+   `agy` binary or its bundled docs exposes a plugin-visible home directory, so
+   `stateDir()` takes `CC_STATE_DIR` as an explicit override rather than
+   guessing. Settle it in the commit that builds the background job commands,
+   which is the first code that needs to write anything.
 4. **Model and effort defaults.** *Resolved.* Reviews default to Opus with
    `xhigh` effort. Fable is supported and defaults to `max`; Sonnet defaults to
    `high`; Haiku and unknown/future model names leave effort to Claude Code.
@@ -281,6 +377,17 @@ Two defects surfaced only in that run, neither reachable by unit tests:
 validator rejects a `$schema` dialect it cannot resolve, so `readSchema`
 strips the declaration before the call.
 
+The Antigravity path was then verified the same way, and by the same trick — the
+plugin reviewing the commit that added Antigravity support. `agy -p "/review ..."`
+resolved the skill, ran the companion out of `~/.gemini/config/plugins/cc/`,
+passed `--cwd` and the focus text through correctly, and returned five findings
+against its own diff. Three of them were worth fixing and are folded into this
+commit: freeform focus text has to be quoted before it is spliced into a shell
+command (parentheses in "focus on parseArgs() and tokenize()" are a syntax error
+on their own), `--cwd` must be dropped rather than passed unresolved when the
+repository cannot be determined, and a relative `CC_STATE_DIR` now throws
+instead of quietly resolving against the agent's own home.
+
 ## Local development loop
 
 Codex caches installed plugins under `<codex-home>/plugins/cache/<marketplace>/<plugin>/<version>/`,
@@ -302,6 +409,21 @@ Keep it out of commits; it exists to force a re-copy during iteration.
 
 **Plugins are read at session start.** After reinstalling, start a new Codex session — an
 already-running one keeps the previously loaded copy.
+
+### Antigravity
+
+Simpler, because there is no cache keyed by version:
+
+```bash
+agy plugin validate ./plugins/cc     # checks the layout, installs nothing
+agy plugin install  ./plugins/cc     # copies into ~/.gemini/config/plugins/cc/
+agy plugin uninstall cc
+```
+
+Install copies rather than links, so every edit needs a reinstall, and plugins
+are read at session start here too. `agy -p "/setup --json"` is the cheapest
+end-to-end check; add `--add-dir <repo>` or the run has no workspace and the
+companion correctly reports that it is not in a git repository.
 
 ### Validate against Codex's own rules
 

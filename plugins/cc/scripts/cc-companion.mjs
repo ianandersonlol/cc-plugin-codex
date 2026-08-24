@@ -36,13 +36,30 @@ import { renderReview, renderSetupReport } from "./lib/render.mjs";
 const PLUGIN_ROOT = pluginRootFrom(import.meta.url, 1);
 const SCHEMA_PATH = path.join(PLUGIN_ROOT, "schemas", "review-output.schema.json");
 
+/**
+ * The plugin ships two manifests so one tree installs on both hosts: Codex
+ * reads `.codex-plugin/plugin.json`, Antigravity requires `plugin.json` at the
+ * plugin root. Prefer the root manifest — Codex's local dev loop rewrites the
+ * `.codex-plugin` version with a cachebuster suffix, which is noise here.
+ */
 function pluginVersion() {
-  try {
-    const manifest = path.join(PLUGIN_ROOT, ".codex-plugin", "plugin.json");
-    return JSON.parse(fs.readFileSync(manifest, "utf8")).version ?? null;
-  } catch {
-    return null;
+  const manifests = [
+    path.join(PLUGIN_ROOT, "plugin.json"),
+    path.join(PLUGIN_ROOT, ".codex-plugin", "plugin.json")
+  ];
+
+  for (const manifest of manifests) {
+    try {
+      const version = JSON.parse(fs.readFileSync(manifest, "utf8")).version;
+      if (version) {
+        return version;
+      }
+    } catch {
+      // Try the next manifest; a missing one is normal on either host.
+    }
   }
+
+  return null;
 }
 
 const REVIEW_SPEC = {
@@ -138,7 +155,10 @@ function handleReview(argv, kind) {
   const cwd = resolveCwd(options);
 
   if (!isGitRepository(cwd)) {
-    throw new Error(`Not a git repository: ${cwd}`);
+    // The usual cause is a host whose shell does not run in the workspace:
+    // Antigravity runs commands from its own home directory, so cwd is its
+    // config dir rather than the repository the user is looking at.
+    throw new Error(`Not a git repository: ${cwd}\nPass --cwd <repository path> to point cc at it.`);
   }
 
   const target = resolveTarget(cwd, { scope: options.scope, baseRef: options.base });

@@ -45,8 +45,26 @@ export function codexHome(env = process.env, homedir = os.homedir()) {
  * Windows the temp directory is aggressively cleaned. Deliberately not an
  * XDG/AppData split either — following CODEX_HOME keeps one rule for all three
  * platforms and keeps cc's state next to the tool it extends.
+ *
+ * CC_STATE_DIR overrides it outright. That is the escape hatch for a host that
+ * is not Codex: Antigravity's per-install home is not exposed to plugin
+ * subprocesses in any form this plugin has verified, so rather than guess at
+ * one, the location stays explicit. Nothing ships that writes here yet — the
+ * background job commands are still unbuilt — but the rule belongs with the
+ * path code rather than in the commit that needs it.
  */
 export function stateDir(env = process.env, homedir = os.homedir()) {
+  const configured = env.CC_STATE_DIR?.trim();
+  if (configured) {
+    // Absolute only. path.resolve() would anchor a relative value to
+    // process.cwd(), and on Antigravity that is ~/.gemini/antigravity-cli
+    // rather than anywhere the user meant — a silently wrong location for
+    // state that is supposed to outlive the session.
+    if (!path.isAbsolute(configured)) {
+      throw new Error(`CC_STATE_DIR must be an absolute path, got: ${configured}`);
+    }
+    return path.normalize(configured);
+  }
   return path.join(codexHome(env, homedir), "cc", "jobs");
 }
 

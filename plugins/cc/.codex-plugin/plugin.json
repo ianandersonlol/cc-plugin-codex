@@ -1,7 +1,7 @@
 {
   "name": "cc",
   "version": "0.1.1+codex.20260728195138",
-  "description": "Delegate code review and implementation work to Claude Code from inside Codex.\n\nUse cc when you want an independent second opinion on a diff, an adversarial pass over a risky change before merge, or to hand a substantial task to another agent. Reviews run read-only against the real repository.",
+  "description": "Delegate code review and implementation work to Claude Code from inside Codex or Antigravity.\n\nUse cc when you want an independent second opinion on a diff, an adversarial pass over a risky change before merge, or to hand a substantial task to another agent. Reviews run read-only against the real repository.",
   "author": {
     "name": "Ian Anderson"
   },
@@ -18,7 +18,7 @@
   "interface": {
     "displayName": "CC",
     "shortDescription": "A second engineering voice, on demand",
-    "longDescription": "cc delegates reviews and implementation work to Claude Code. Reviews run read-only with access to the whole repository, so findings are verified against real call sites rather than guessed from a diff.",
+    "longDescription": "cc delegates reviews and implementation work to Claude Code. Reviews run read-only with access to the whole repository, so findings are verified against real call sites rather than guessed from a diff. The same plugin directory installs on Codex and Antigravity.",
     "developerName": "Ian Anderson",
     "category": "Engineering",
     "capabilities": [

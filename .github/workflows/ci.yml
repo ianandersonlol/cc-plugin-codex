@@ -47,6 +47,7 @@ jobs:
           set -euo pipefail
           for file in \
             .agents/plugins/marketplace.json \
+            plugins/cc/plugin.json \
             plugins/cc/.codex-plugin/plugin.json \
             plugins/cc/schemas/review-output.schema.json
           do
@@ -54,15 +55,32 @@ jobs:
             echo "ok: $file"
           done
 
-      - name: Plugin version matches package version
+      - name: Plugin versions match package version
         shell: bash
         run: |
           set -euo pipefail
           pkg=$(node -p "require('./package.json').version")
           # Codex's local dev flow appends a +codex.<token> cachebuster; compare the prefix.
-          plugin=$(node -p "require('./plugins/cc/.codex-plugin/plugin.json').version.split('+')[0]")
-          test "$pkg" = "$plugin" || {
-            echo "version mismatch: package.json=$pkg plugin.json=$plugin" >&2
+          root=$(node -p "require('./plugins/cc/plugin.json').version.split('+')[0]")
+          codex=$(node -p "require('./plugins/cc/.codex-plugin/plugin.json').version.split('+')[0]")
+          test "$pkg" = "$root" && test "$pkg" = "$codex" || {
+            echo "version mismatch: package.json=$pkg plugin.json=$root .codex-plugin=$codex" >&2
             exit 1
           }
           echo "ok: $pkg"
+
+      - name: Antigravity requires the manifest at the plugin root
+        shell: bash
+        run: |
+          set -euo pipefail
+          # `agy plugin validate` stats <root>/plugin.json and accepts nothing
+          # else — it rejects both .codex-plugin/ and .claude-plugin/. agy is
+          # not installable on a runner, so assert the shape it checks.
+          test -f plugins/cc/plugin.json || { echo "missing plugins/cc/plugin.json" >&2; exit 1; }
+          for skill in setup review adversarial-review; do
+            test -f "plugins/cc/skills/$skill/SKILL.md" || {
+              echo "missing skills/$skill/SKILL.md" >&2
+              exit 1
+            }
+          done
+          echo "ok: antigravity plugin layout"
