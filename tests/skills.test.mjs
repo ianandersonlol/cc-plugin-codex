@@ -83,3 +83,33 @@ for (const name of SKILLS) {
     assert.match(readSkill(name), /drop `--cwd` and its value from the command entirely/);
   });
 }
+
+for (const name of ["review", "adversarial-review"]) {
+  test(`${name} documents model choice, access consent, and failure handling`, () => {
+    const source = readSkill(name);
+
+    assert.match(source, /Use Claude Opus 5\.5 .*for a normal review/);
+    assert.match(
+      source,
+      /Fable 5\.2[\s\S]*genuinely hard reasoning[\s\S]*ambiguous cross-system design[\s\S]*high-stakes[\s\S]*subtle concurrency[\s\S]*remain unresolved after an Opus review/
+    );
+    assert.match(
+      source,
+      /use Fable only if the user explicitly requests it or confirms\s+access and agrees to use it/
+    );
+    assert.match(source, /Do not\s+infer or\s+probe for access/);
+    assert.match(
+      source,
+      /When offering Fable, tell the user that Claude Code's print\s+mode can incur usage-credit charges without an interactive prompt/
+    );
+    assert.match(source, /Preserve user-provided `--model`, `--effort`, and all other flags exactly/);
+    assert.match(
+      source,
+      /If Fable access fails, surface the CLI error and offer a separate retry[\s\S]*do not silently fall back or automatically rerun/
+    );
+  });
+}
+
+test("adversarial mode alone does not justify selecting Fable", () => {
+  assert.match(readSkill("adversarial-review"), /An\s+adversarial review alone is not a reason to use\s+Fable/);
+});

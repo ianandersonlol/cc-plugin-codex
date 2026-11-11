@@ -85,9 +85,9 @@ function usage() {
     "  --cwd <path>         Repository directory (default: process cwd)",
     "  --base <ref>         Compare against this ref instead of the working tree",
     "  --scope <mode>       auto | working-tree | branch (default: auto)",
-    `  --model <name>       Claude model, including fable (default: ${DEFAULT_REVIEW_MODEL})`,
+    `  --model <name>       Claude model ID or fable alias (default: ${DEFAULT_REVIEW_MODEL})`,
     "  --effort <level>     low | medium | high | xhigh | max",
-    "                       defaults: fable=max, opus=xhigh, sonnet=high",
+    "                       defaults: Fable=max, Opus=xhigh, Sonnet=high",
     "  --json               Emit raw JSON instead of rendered text"
   ].join("\n");
 }

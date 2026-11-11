@@ -347,12 +347,21 @@ installed on a CI runner, so the shape it requires is asserted instead.
    `stateDir()` takes `CC_STATE_DIR` as an explicit override rather than
    guessing. Settle it in the commit that builds the background job commands,
    which is the first code that needs to write anything.
-4. **Model and effort defaults.** *Resolved.* Reviews default to Opus with
-   `xhigh` effort. Fable is supported and defaults to `max`; Sonnet defaults to
-   `high`; Haiku and unknown/future model names leave effort to Claude Code.
-   `--model` and `--effort` remain explicit overrides. Finding priority is a
-   separate output concern: the schema requires critical/high/medium/low
-   severity, and the renderer sorts findings in that order.
+4. **Model and effort defaults.** *Resolved.* Reviews default to Claude Opus
+   5.5 (`claude-opus-5-5`) with `xhigh` effort. The case-insensitive `fable`
+   shorthand resolves to Claude Fable 5.2 (`claude-fable-5-2`) and defaults to
+   `max`; Sonnet defaults to `high`; Haiku and unknown/future model names leave
+   effort to Claude Code. Other explicit aliases and model IDs, including old
+   and future IDs, pass through unchanged after trimming. `--model` and
+   `--effort` remain explicit overrides. Fable is suggested only for genuinely
+   difficult reasoning, ambiguous cross-system design, high-stakes architecture,
+   subtle concurrency, or substantive issues left after Opus; it is used only
+   when explicitly requested or after the user confirms access and agrees.
+   Access is not detected, and an access failure is surfaced with an offer to
+   retry on Opus rather than an automatic fallback. These effort values are
+   `cc` review policy, not model defaults. Finding priority is a separate output
+   concern: the schema requires critical/high/medium/low severity, and the
+   renderer sorts findings in that order.
 
 ## Build order
 
