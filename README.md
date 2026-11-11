@@ -51,19 +51,37 @@ command, so the same skill is `/review` there.
 
 ## Models, effort, and finding priority
 
-Reviews use **Opus by default**. Fable is supported with `--model fable` (or
-`--model claude-fable-5`), and any model name accepted by the installed Claude
-Code CLI can be passed through.
+Reviews use **Claude Opus 5.5** (`claude-opus-5-5`) by default. Fable 5.2 is
+available with `--model fable`, which resolves to `claude-fable-5-2`. Other
+explicit model aliases and IDs are passed through to the installed Claude Code
+CLI unchanged (after trimming surrounding whitespace).
 
-| Model family | Default effort |
+Opus 5.5 requires Claude Code 2.1.280 or later; Fable 5.2 requires 2.1.321 or
+later. Update Claude Code with `claude update`. See the official [Claude Code
+model configuration](https://code.claude.com/docs/en/model-config) and
+[Claude models overview](https://platform.claude.com/docs/en/models/overview)
+for supported IDs and current requirements.
+
+These are `cc` review-specific effort defaults, not Claude model defaults:
+
+| Model family | `cc` review effort |
 |---|---|
-| Fable | `max` |
-| Opus | `xhigh` |
+| Fable 5.2 (`claude-fable-5-2`) | `max` |
+| Opus 5.5 (`claude-opus-5-5`) | `xhigh` |
 | Sonnet | `high` |
 | Haiku or an unknown model | Claude Code's default |
 
 Pass `--effort low|medium|high|xhigh|max` to override that selection. For
 example: `$cc:adversarial-review --model fable --effort high`.
+
+Use Opus 5.5 for normal reviews. Fable 5.2 can be suggested for genuinely
+difficult reasoning, ambiguous cross-system design, high-stakes architecture,
+subtle concurrency, or substantive issues that remain unresolved after an Opus
+review. Use Fable only when the user explicitly requests it or confirms both
+access and agreement to use it. Do not infer or probe for access; otherwise
+continue with Opus. An adversarial review alone is not a reason to use Fable.
+If Fable access fails, surface the CLI error and offer an Opus retry; never
+silently switch models or rerun automatically.
 
 Effort controls how hard the reviewer reasons. Separately, every finding is
 assigned a **priority** (`critical`, `high`, `medium`, or `low`) and rendered in
@@ -71,9 +89,12 @@ priority order, then by confidence within the same priority.
 
 ## Requirements
 
-- **Claude Code CLI** (`claude`) installed and logged in. A Claude subscription
-  covers usage — the runtime shells out to `claude -p` and never touches
-  `ANTHROPIC_API_KEY`, so runs bill against your existing plan.
+- **Claude Code CLI** (`claude`) installed and authenticated. `cc` invokes
+  `claude -p` and removes `ANTHROPIC_API_KEY` and `ANTHROPIC_AUTH_TOKEN` from its
+  child environment. Do not assume Fable is available or included with a
+  subscription: Claude Code print mode can consume usage credits without an
+  interactive prompt. See the official [CLI reference](https://code.claude.com/docs/en/cli-reference#cli-flags)
+  and [pricing](https://platform.claude.com/docs/en/about-claude/pricing).
 - **Node.js 18.18+**
 - Codex with `plugins` enabled (stable since 0.144.x), or Antigravity (`agy`).
 

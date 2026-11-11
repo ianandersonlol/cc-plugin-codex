@@ -67,20 +67,39 @@ test("review args pass model and effort through to Claude Code", () => {
   ]);
 });
 
-test("reviews default to Opus and resolve the Fable alias", () => {
-  assert.equal(DEFAULT_REVIEW_MODEL, "opus");
-  assert.equal(resolveReviewModel(), "opus");
-  assert.equal(resolveReviewModel("fable"), "claude-fable-5");
-  assert.equal(resolveReviewModel("FABLE"), "claude-fable-5");
-  assert.equal(resolveReviewModel("claude-fable-5"), "claude-fable-5");
-  assert.equal(resolveReviewModel("future-model"), "future-model");
+test("reviews default to Opus 5.5 for missing and blank model values", () => {
+  assert.equal(DEFAULT_REVIEW_MODEL, "claude-opus-5-5");
+  for (const requestedModel of [undefined, null, "", " \t\n"]) {
+    assert.equal(resolveReviewModel(requestedModel), "claude-opus-5-5");
+  }
+});
+
+test("Fable shorthand resolves case-insensitively and other model names pass through", () => {
+  assert.equal(resolveReviewModel("fable"), "claude-fable-5-2");
+  assert.equal(resolveReviewModel("FABLE"), "claude-fable-5-2");
+  assert.equal(resolveReviewModel(" FaBlE "), "claude-fable-5-2");
+
+  for (const model of [
+    "opus",
+    "sonnet",
+    "claude-opus-4-6",
+    "claude-fable-5",
+    "claude-opus-5-5",
+    "claude-fable-5-2",
+    "future-model-v9"
+  ]) {
+    assert.equal(resolveReviewModel(model), model);
+  }
+  assert.equal(resolveReviewModel("  claude-opus-4-6  "), "claude-opus-4-6");
 });
 
 test("effort defaults follow the selected model family", () => {
   assert.equal(resolveReviewEffort("fable"), "max");
   assert.equal(resolveReviewEffort("claude-fable-5"), "max");
+  assert.equal(resolveReviewEffort("claude-fable-5-2"), "max");
   assert.equal(resolveReviewEffort("opus"), "xhigh");
   assert.equal(resolveReviewEffort("claude-opus-4-6"), "xhigh");
+  assert.equal(resolveReviewEffort("claude-opus-5-5"), "xhigh");
   assert.equal(resolveReviewEffort("sonnet"), "high");
   assert.equal(resolveReviewEffort("haiku"), undefined);
   assert.equal(resolveReviewEffort("future-model"), undefined);
@@ -205,6 +224,28 @@ test("runClaude sends the prompt on stdin and shells out only for shims", () => 
   assert.equal(call.options.shell, false);
   assert.equal(call.args.includes("REVIEW THIS"), false, "prompt must not be an argv entry");
   assert.equal(call.options.env.ANTHROPIC_API_KEY, undefined);
+});
+
+test("runClaude forwards the selected model ID and effort to the subprocess", () => {
+  const runner = fakeRunner(RESULT_ENVELOPE);
+  runClaude("REVIEW THIS", {
+    binary: { path: "/home/ian/.local/bin/claude", kind: "direct", requiresShell: false },
+    runCommandImpl: runner,
+    env: { PATH: "/usr/bin" },
+    model: "claude-fable-5-2",
+    effort: "max",
+    schema: '{"type":"object"}'
+  });
+
+  const [call] = runner.calls;
+  assert.deepEqual(call.args.slice(call.args.indexOf("--model"), call.args.indexOf("--model") + 2), [
+    "--model",
+    "claude-fable-5-2"
+  ]);
+  assert.deepEqual(call.args.slice(call.args.indexOf("--effort"), call.args.indexOf("--effort") + 2), [
+    "--effort",
+    "max"
+  ]);
 });
 
 test("runClaude quotes every argument when forced through a shim", () => {

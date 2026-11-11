@@ -36,13 +36,13 @@ export const READ_ONLY_TOOLS = [
 
 export const WRITE_DENIED_TOOLS = ["Edit", "Write", "NotebookEdit"];
 
-export const DEFAULT_REVIEW_MODEL = "opus";
+export const DEFAULT_REVIEW_MODEL = "claude-opus-5-5";
 export const VALID_EFFORTS = ["low", "medium", "high", "xhigh", "max"];
 
 /** Resolve user-friendly model aliases while preserving full and future model names. */
 export function resolveReviewModel(requestedModel) {
   const model = String(requestedModel ?? "").trim() || DEFAULT_REVIEW_MODEL;
-  return model.toLowerCase() === "fable" ? "claude-fable-5" : model;
+  return model.toLowerCase() === "fable" ? "claude-fable-5-2" : model;
 }
 
 /**
