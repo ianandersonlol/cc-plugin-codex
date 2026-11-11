@@ -7,14 +7,38 @@ import { fileURLToPath } from "node:url";
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const SKILLS = ["setup", "review", "adversarial-review"];
 
+function normalizeSkillLineEndings(source) {
+  return source.replace(/\r\n/g, "\n");
+}
+
 function readSkill(name) {
-  return fs.readFileSync(path.join(ROOT, "plugins", "cc", "skills", name, "SKILL.md"), "utf8");
+  return normalizeSkillLineEndings(
+    fs.readFileSync(path.join(ROOT, "plugins", "cc", "skills", name, "SKILL.md"), "utf8")
+  );
 }
 
 /** Every fenced block in a skill body, fence markers stripped. */
 function fencedBlocks(source) {
   return [...source.matchAll(/```[a-z]*\n([\s\S]*?)```/g)].map((match) => match[1]);
 }
+
+test("CRLF skill fixture normalizes before assertions and fence parsing", () => {
+  const crlfFixture = [
+    "---",
+    "name: review",
+    "---",
+    "Raw arguments:",
+    "`$ARGUMENTS`",
+    "```bash",
+    "node cc-companion.mjs review",
+    "```"
+  ].join("\r\n");
+  const source = normalizeSkillLineEndings(crlfFixture);
+
+  assert.match(source, /^---\nname: review\n/m);
+  assert.match(source, /Raw arguments:\n`\$ARGUMENTS`/);
+  assert.deepEqual(fencedBlocks(source), ["node cc-companion.mjs review\n"]);
+});
 
 for (const name of SKILLS) {
   test(`${name} is packaged as a portable plugin skill`, () => {
